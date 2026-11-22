@@ -384,7 +384,33 @@ npm test
 
 ## Deployment
 
-The stack is ready to deploy with Compose on any Docker host (a VM on EC2, GCE, DigitalOcean, etc.):
+### Free: Render (single container)
+
+Render's free plan allows one web service with 512 MB RAM and 0.1 CPU, and has no free background workers. So `Dockerfile.render` packs everything into **one container**:
+
+- Redis
+- the Temporal dev server, with its web UI off
+- one Node process that runs both the API and the worker
+
+`scripts/render-start.sh` starts them and stops the container if any of them exits, so Render restarts it. Under the free plan's limits this uses about 220 MB of RAM. `render.yaml` describes the service for Render.
+
+1. Sign in at <https://render.com> with GitHub. The free plan needs no card.
+2. **New → Blueprint**, select this repository, then **Apply**. Render reads `render.yaml` and builds `Dockerfile.render`. The first build takes about 5–10 minutes.
+3. The app is then live at `https://hotel-offer-orchestrator.onrender.com`. Render adds a suffix if that name is taken; the dashboard shows the real URL.
+   - `https://<your-app>.onrender.com/health`
+   - `https://<your-app>.onrender.com/api/hotels?city=delhi`
+4. **Keep it awake.** Free services sleep after 15 minutes without traffic. Create a free job at <https://cron-job.org> that calls `https://<your-app>.onrender.com/livez` every 10 minutes.
+
+Limits of the free plan:
+
+- **Slower responses.** With 0.1 CPU, the first search after a start takes a few seconds; after that, searches take about 0.5–2 s.
+- **Data resets on restart.** Redis and Temporal keep their data in memory, so it is lost when the service restarts or redeploys. That doesn't affect results, because every search fetches fresh data and saves it again.
+- **Hour limit.** One always-on service uses about 744 of the 750 free hours a month, so don't run a second free service in the same Render workspace.
+- **Public admin switch.** `/admin/suppliers/*` is open to anyone on a public URL. If someone leaves a supplier down, switch it back on with `PUT /admin/suppliers/<id>/status` and `{"status":"up"}`.
+
+### Any Docker host (docker compose)
+
+The full multi-container stack runs with Compose on any Docker host (a VM on EC2, GCE, DigitalOcean, etc.) with at least 2 GB RAM:
 
 ```bash
 git clone <this-repo> && cd <this-repo>
@@ -437,6 +463,9 @@ src/
 │   ├── activities.ts           # fetchSupplierHotels, saveHotels, filterHotelsByPrice
 │   ├── worker.ts               # worker entrypoint (pino-backed Temporal logger)
 │   └── hotelSearchGateway.ts   # Temporal client wrapper used by the API
+├── scripts/
+│   └── bundleWorkflows.ts      # build step: pre-bundles workflow code into dist/workflow-bundle.js
+├── allInOne.ts                 # API + worker in one process (single-container hosting)
 ├── config.ts                   # environment-based configuration
 ├── logger.ts                   # pino logger
 └── types.ts                    # shared types
@@ -444,6 +473,9 @@ test/                           # vitest: unit, API and Temporal workflow tests
 postman/                        # Postman collection
 Dockerfile                      # multi-stage build; one image for API and worker
 docker-compose.yml              # temporal, redis, api, worker
+Dockerfile.render               # single-container image (Redis + Temporal + API/worker) for free hosting
+scripts/render-start.sh         # starts and supervises the three processes in that container
+render.yaml                     # Render Blueprint (one free web service)
 ```
 
 ---

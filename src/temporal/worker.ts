@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { DefaultLogger, NativeConnection, Runtime, Worker, type LogLevel } from '@temporalio/worker';
 import { Redis } from 'ioredis';
 import { config } from '../config';
@@ -31,6 +33,20 @@ async function connectWithRetry(maxAttempts = 30): Promise<NativeConnection> {
   }
 }
 
+/**
+ * Production builds ship a pre-built workflow bundle (see src/scripts/bundleWorkflows.ts), which
+ * avoids running webpack at startup — faster boot and much lower peak memory.
+ * In development (tsx) there is no bundle, so the worker bundles the TypeScript source itself.
+ */
+function workflowSource(): { workflowBundle: { codePath: string } } | { workflowsPath: string } {
+  const prebuilt = path.join(__dirname, '../workflow-bundle.js');
+  if (existsSync(prebuilt)) {
+    workerLogger.info({ codePath: prebuilt }, 'Using pre-built workflow bundle');
+    return { workflowBundle: { codePath: prebuilt } };
+  }
+  return { workflowsPath: require.resolve('./workflows') };
+}
+
 async function main(): Promise<void> {
   const redis = new Redis(config.redis.url, { maxRetriesPerRequest: 2 });
   redis.on('error', (err) => workerLogger.warn({ err: err.message }, 'Redis connection error'));
@@ -42,7 +58,7 @@ async function main(): Promise<void> {
       connection,
       namespace: config.temporal.namespace,
       taskQueue: config.temporal.taskQueue,
-      workflowsPath: require.resolve('./workflows'),
+      ...workflowSource(),
       activities: createActivities({
         store,
         supplierBaseUrl: config.suppliers.baseUrl,

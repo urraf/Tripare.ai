@@ -1,0 +1,19 @@
+# Render Blueprint: deploys the whole system as ONE free web service (see Dockerfile.render).
+# Render dashboard -> New -> Blueprint -> pick this repo -> Apply.
+services:
+  - type: web
+    name: hotel-offer-orchestrator
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /livez
+    autoDeploy: true
+    envVars:
+      - key: LOG_LEVEL
+        value: info
+      - key: SUPPLIER_TIMEOUT_MS
+        value: "5000"
+      - key: WORKFLOW_TIMEOUT_MS
+        value: "30000"

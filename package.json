@@ -9,10 +9,11 @@
     "node": ">=20.3.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node dist/scripts/bundleWorkflows.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start:api": "node dist/api/server.js",
     "start:worker": "node dist/temporal/worker.js",
+    "start:all": "node dist/allInOne.js",
     "dev:api": "tsx watch src/api/server.ts",
     "dev:worker": "tsx watch src/temporal/worker.ts",
     "test": "vitest run",
