@@ -1,0 +1,43 @@
+{
+  "name": "hotel-offer-orchestrator",
+  "version": "1.0.0",
+  "description": "Aggregates hotel offers from two suppliers, dedupes by hotel name and picks the cheapest offer, orchestrated with Temporal and cached in Redis.",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "dist/api/server.js",
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start:api": "node dist/api/server.js",
+    "start:worker": "node dist/temporal/worker.js",
+    "dev:api": "tsx watch src/api/server.ts",
+    "dev:worker": "tsx watch src/temporal/worker.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@temporalio/activity": "1.25.0",
+    "@temporalio/client": "1.25.0",
+    "@temporalio/common": "1.25.0",
+    "@temporalio/worker": "1.25.0",
+    "@temporalio/workflow": "1.25.0",
+    "express": "5.1.0",
+    "ioredis": "5.11.1",
+    "pino": "9.7.0",
+    "pino-http": "10.5.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "1.25.0",
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.30",
+    "@types/supertest": "6.0.3",
+    "supertest": "7.1.1",
+    "tsx": "4.20.3",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

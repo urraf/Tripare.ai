@@ -1,0 +1,82 @@
+name: hotel-offer-orchestrator
+
+x-app-env: &app-env
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  TEMPORAL_ADDRESS: temporal:7233
+  TEMPORAL_NAMESPACE: default
+  TEMPORAL_TASK_QUEUE: hotel-offers
+  REDIS_URL: redis://redis:6379
+  # The mock suppliers are served by the api container.
+  SUPPLIER_BASE_URL: http://api:3000
+  SUPPLIER_TIMEOUT_MS: 3000
+  HOTELS_TTL_SECONDS: 3600
+  WORKFLOW_TIMEOUT_MS: 15000
+
+services:
+  temporal:
+    # Temporal CLI dev server: frontend on 7233, Web UI on 8233. Fine for dev/demo, not for production.
+    image: temporalio/temporal:1.9.1
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--ui-ip", "0.0.0.0", "--namespace", "default"]
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+      - "${TEMPORAL_UI_PORT:-8233}:8233"
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    image: hotel-offer-orchestrator:latest
+    environment:
+      <<: *app-env
+      SERVICE_NAME: hotel-api
+      PORT: 3000
+      SUPPLIER_A_DOWN: ${SUPPLIER_A_DOWN:-false}
+      SUPPLIER_B_DOWN: ${SUPPLIER_B_DOWN:-false}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      temporal:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    image: hotel-offer-orchestrator:latest
+    command: ["node", "dist/temporal/worker.js"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: hotel-worker
+    healthcheck:
+      disable: true
+    depends_on:
+      temporal:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis-data:
