@@ -4,6 +4,21 @@ Gets hotel offers from two suppliers, merges hotels that appear under the same n
 
 **Stack:** Node.js 22 · TypeScript · Express 5 · Temporal · Redis · Docker Compose
 
+## Live demo
+
+Deployed on Render's free plan ([how](#free-render-single-container)). The first request after a quiet period can take a few seconds.
+
+| Endpoint | Link |
+| --- | --- |
+| Best offers for Delhi | <https://hotel-offer-orchestrator-9k79.onrender.com/api/hotels?city=delhi> |
+| Price filter (5000–10000) | <https://hotel-offer-orchestrator-9k79.onrender.com/api/hotels?city=delhi&minPrice=5000&maxPrice=10000> |
+| City with no results | <https://hotel-offer-orchestrator-9k79.onrender.com/api/hotels?city=paris> |
+| Health (both suppliers) | <https://hotel-offer-orchestrator-9k79.onrender.com/health> |
+| Supplier A (mock) | <https://hotel-offer-orchestrator-9k79.onrender.com/supplierA/hotels> |
+| Supplier B (mock) | <https://hotel-offer-orchestrator-9k79.onrender.com/supplierB/hotels> |
+
+To run the Postman collection against the live demo, set the `baseUrl` variable to `https://hotel-offer-orchestrator-9k79.onrender.com`.
+
 ---
 
 ## Contents
